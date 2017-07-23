@@ -25,15 +25,15 @@ public interface ManagementService {
      * Display the assignments between tables and their waiters.
      *
      * @param restaurant restaurant to display
-     * @return Map of tables to waiters, or empty if no waiter assigned.
+     * @return Map of tables to waiters, or empty if no waiter assigned. All tables will be present.
      */
-    Map<Table, Set<Optional<Waiter>>> displayAssignments(Restaurant restaurant);
+    Map<Table, Optional<Waiter>> displayAssignments(Restaurant restaurant);
 
     /**
-     * Display the tables for a waiter.
+     * Display the tables for a waiter grouped by Restaurant.
      *
      * @param waiter
      * @return
      */
-    Set<Table> displayTables(Waiter waiter);
+    Map<Restaurant, Set<Table>> displayTables(Waiter waiter);
 }

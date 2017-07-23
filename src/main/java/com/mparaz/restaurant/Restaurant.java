@@ -13,6 +13,14 @@ public class Restaurant {
     private final Set<Table> tables;
 
     public Restaurant(String name, Set<Table> tables) {
+        if (name == null) {
+            throw new IllegalArgumentException("restaurant must have a name");
+        }
+
+        if (tables == null) {
+            throw new IllegalArgumentException("restaurant must have tables");
+        }
+
         this.name = name;
 
         // Defensive copy coming in.
