@@ -56,7 +56,8 @@ public class PersistenceServiceImplIntegrationTest {
         Assert.assertThat(testRestaurant.get().getTables().size(), Matchers.is(1));
         Assert.assertThat(testRestaurant.get().getTables().iterator().next().getNumber(), Matchers.is("Test123"));
 
-        final Optional<TableEntity> test123 = tableEntityRepository.findByNumber("Test123");
+        final Optional<TableEntity> test123 =
+                tableEntityRepository.findByNumberAndRestaurant("Test123", testRestaurant.get());
         Assert.assertTrue(test123.isPresent());
         Assert.assertThat(test123.get().getRestaurant().getName(), Matchers.is("Test restaurant"));
 

@@ -1,5 +1,6 @@
 package com.mparaz.restaurant.persistence;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -16,6 +17,7 @@ public class RestaurantEntity {
     @GeneratedValue
     private Long id;
 
+    @Column(unique = true)
     private String name;
 
     /**

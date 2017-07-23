@@ -28,24 +28,25 @@ public class ManagementServiceImpl implements ManagementService {
 
     // Data is loaded from persistence, not at component construction but lazy-loaded at first use,
     // so that data can be stored into persistence before it is used.
+    // Set initially to empty.
 
     private boolean loaded = false;
 
-    private Set<Table> tables;
+    private Set<Table> tables = Collections.emptySet();
 
-    private Set<Waiter> waiters;
+    private Set<Waiter> waiters = Collections.emptySet();
 
     // Use two Maps for tracking assignments to avoid having to search.
 
     /**
      * Assignment tracking from waiter to tables.
      */
-    private Map<Waiter, Set<Table>> waiterTableAssignments;
+    private Map<Waiter, Set<Table>> waiterTableAssignments = Collections.emptyMap();
 
     /**
      * Assignment tracking from table to waiter.
      */
-    private Map<Table, Waiter> tableWaiterAssignments;
+    private Map<Table, Waiter> tableWaiterAssignments = Collections.emptyMap();
 
     public ManagementServiceImpl(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -172,6 +173,23 @@ public class ManagementServiceImpl implements ManagementService {
     }
 
     @Override
+    public Map<Waiter, Map<Restaurant, Set<Table>>> displayTables() {
+        if (!loaded) {
+            loadFromPersistence();
+            loaded = true;
+        }
+
+        final Map<Waiter, Map<Restaurant, Set<Table>>> result = new HashMap<>();
+        for (final Waiter waiter: waiterTableAssignments.keySet()) {
+            result.put(waiter,
+                waiterTableAssignments.getOrDefault(waiter, Collections.emptySet())
+                    .stream().collect(Collectors.groupingBy(Table::getRestaurant, Collectors.toSet())));
+        }
+
+        return result;
+    }
+
+    @Override
     public Map<Restaurant, Set<Table>> displayTables(Waiter waiter) {
         if (waiter == null) {
             throw new IllegalArgumentException("must provide waiter");
@@ -185,5 +203,75 @@ public class ManagementServiceImpl implements ManagementService {
         // Go through the waiter to table assignments if available, and group by the restaurant.
         return waiterTableAssignments.getOrDefault(waiter, Collections.emptySet())
                 .stream().collect(Collectors.groupingBy(Table::getRestaurant, Collectors.toSet()));
+    }
+
+    // Even the String-based methods need to load from persistence to work, before calling the actual method,
+    // because the data is needed for the String lookups.
+
+    /**
+     * String based method for web API.
+     */
+    @Override
+    public Set<Waiter> assignWaiter(String waiterName, String restaurantName, String tableNumber) {
+        if (!loaded) {
+            loadFromPersistence();
+            loaded = true;
+        }
+
+        final Optional<Waiter> waiterOptional =
+                waiters.stream().filter(waiter -> waiterName.equals(waiter.getName())).findFirst();
+
+        if (!waiterOptional.isPresent()) {
+            return Collections.emptySet();
+        }
+
+        final Optional<Table> tableOptional =
+                tables.stream().filter(table -> (restaurantName.equals(table.getRestaurant().getName())
+                && tableNumber.equals(table.getNumber()))).findFirst();
+
+        if (!tableOptional.isPresent()) {
+            return Collections.emptySet();
+        }
+
+        return assignWaiter(waiterOptional.get(), tableOptional.get());
+    }
+
+    /**
+     * String based method for web API.
+     */
+    @Override
+    public Map<Table, Optional<Waiter>> displayAssignments(String restaurantName) {
+        if (!loaded) {
+            loadFromPersistence();
+            loaded = true;
+        }
+
+        final Optional<Restaurant> restaurantOptional =
+                tables.stream().map(Table::getRestaurant)
+                .filter(restaurant -> restaurantName.equals(restaurant.getName()))
+                .findFirst();
+
+        if (restaurantOptional.isPresent()) {
+            return displayAssignments(restaurantOptional.get());
+        } else {
+            return Collections.emptyMap();
+        }
+    }
+
+    @Override
+    public Map<Restaurant, Set<Table>> displayTables(String waiterName) {
+        if (!loaded) {
+            loadFromPersistence();
+            loaded = true;
+        }
+
+        final Optional<Waiter> waiterOptional =
+                waiters.stream().filter(waiter -> waiterName.equals(waiter.getName())).findFirst();
+
+        if (!waiterOptional.isPresent()) {
+            return Collections.emptyMap();
+        }
+
+        return displayTables(waiterOptional.get());
     }
 }

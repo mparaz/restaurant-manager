@@ -53,7 +53,23 @@ public class PersistenceServiceImpl implements PersistenceService {
     }
 
     private TableEntity createOrRetrieveTableEntity(Table table) {
-        final Optional<TableEntity> tableEntityOptional = tableEntityRepository.findByNumber(table.getNumber());
+
+        final Restaurant restaurant = table.getRestaurant();
+
+        final Optional<RestaurantEntity> restaurantEntityOptional =
+                restaurantEntityRepository.findByName(restaurant.getName());
+
+        RestaurantEntity restaurantEntity;
+        if (restaurantEntityOptional.isPresent()) {
+            restaurantEntity = restaurantEntityOptional.get();
+        } else {
+            restaurantEntity = new RestaurantEntity();
+            restaurantEntity.setName(restaurant.getName());
+            restaurantEntity = restaurantEntityRepository.save(restaurantEntity);
+        }
+
+        final Optional<TableEntity> tableEntityOptional =
+                tableEntityRepository.findByNumberAndRestaurant(table.getNumber(), restaurantEntity);
 
         TableEntity tableEntity;
         if (tableEntityOptional.isPresent()) {
@@ -61,20 +77,6 @@ public class PersistenceServiceImpl implements PersistenceService {
         } else {
             tableEntity = new TableEntity();
             tableEntity.setNumber(table.getNumber());
-
-            final Restaurant restaurant = table.getRestaurant();
-
-            final Optional<RestaurantEntity> restaurantEntityOptional =
-                    restaurantEntityRepository.findByName(restaurant.getName());
-
-            RestaurantEntity restaurantEntity;
-            if (restaurantEntityOptional.isPresent()) {
-                restaurantEntity = restaurantEntityOptional.get();
-            } else {
-                restaurantEntity = new RestaurantEntity();
-                restaurantEntity.setName(restaurant.getName());
-                restaurantEntity = restaurantEntityRepository.save(restaurantEntity);
-            }
 
             tableEntity.setRestaurant(restaurantEntity);
             tableEntity = tableEntityRepository.save(tableEntity);
@@ -102,10 +104,12 @@ public class PersistenceServiceImpl implements PersistenceService {
 
     // Methods for persistence setup.
 
+    @Transactional
     public void createTable(Table table) {
         createOrRetrieveTableEntity(table);
     }
 
+    @Transactional
     public void createWaiter(Waiter waiter) {
         createOrRetrieveWaiterEntity(waiter);
     }
