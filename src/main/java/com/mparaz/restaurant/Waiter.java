@@ -37,4 +37,11 @@ public class Waiter {
     public int hashCode() {
         return name.hashCode();
     }
+
+    @Override
+    public String toString() {
+        return "Waiter{"
+                + "name='" + name + '\''
+                + '}';
+    }
 }

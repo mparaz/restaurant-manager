@@ -1,38 +1,47 @@
 package com.mparaz.restaurant;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 /**
  * The restaurant model.
  */
 public class Restaurant {
     private final String name;
 
-    private final Set<Table> tables;
-
-    public Restaurant(String name, Set<Table> tables) {
+    public Restaurant(String name) {
         if (name == null) {
             throw new IllegalArgumentException("restaurant must have a name");
         }
 
-        if (tables == null) {
-            throw new IllegalArgumentException("restaurant must have tables");
-        }
-
         this.name = name;
-
-        // Defensive copy coming in.
-        this.tables = new HashSet<>(tables);
     }
 
     public String getName() {
         return name;
     }
 
-    public Set<Table> getTables() {
-        // Defensive copy going out.
-        return Collections.unmodifiableSet(tables);
+    @Override
+    public String toString() {
+        return "Restaurant{"
+                + "name='" + name + '\''
+                + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof Restaurant)) {
+            return false;
+        }
+
+        Restaurant that = (Restaurant) o;
+
+        return name.equals(that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode();
     }
 }

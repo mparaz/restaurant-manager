@@ -4,6 +4,8 @@ import com.mparaz.restaurant.Restaurant;
 import com.mparaz.restaurant.Table;
 import com.mparaz.restaurant.Waiter;
 import com.mparaz.restaurant.service.ManagementService;
+import com.mparaz.restaurant.service.PersistenceService;
+import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,32 +19,52 @@ import java.util.stream.Collectors;
 /**
  * Management Service implementation.
  */
+@Service
 public class ManagementServiceImpl implements ManagementService {
 
     private static final int MAX_TABLES_PER_RESTAURANT = 4;
 
-    private final Set<Restaurant> restaurants;
+    private final PersistenceService persistenceService;
 
-    private final Set<Table> tables;
+    // Data is loaded from persistence, not at component construction but lazy-loaded at first use,
+    // so that data can be stored into persistence before it is used.
 
-    private final Set<Waiter> waiters;
+    private boolean loaded = false;
+
+    private Set<Table> tables;
+
+    private Set<Waiter> waiters;
 
     // Use two Maps for tracking assignments to avoid having to search.
 
     /**
      * Assignment tracking from waiter to tables.
      */
-    private Map<Waiter, Set<Table>> waiterTableAssignments = new HashMap<>();
+    private Map<Waiter, Set<Table>> waiterTableAssignments;
 
     /**
      * Assignment tracking from table to waiter.
      */
-    private Map<Table, Waiter> tableWaiterAssignments = new HashMap<>();
+    private Map<Table, Waiter> tableWaiterAssignments;
 
-    public ManagementServiceImpl(Set<Restaurant> restaurants, Set<Table> tables, Set<Waiter> waiters) {
-        this.restaurants = restaurants;
-        this.tables = tables;
-        this.waiters = waiters;
+    public ManagementServiceImpl(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    private void loadFromPersistence() {
+        // Load from persistence.
+        this.tables = persistenceService.loadTables();
+        this.waiters = persistenceService.loadWaiters();
+
+        this.waiterTableAssignments = persistenceService.loadWaiterTableAssignments();
+
+        // Derive values.
+        tableWaiterAssignments = new HashMap<>();
+        for (final Map.Entry<Waiter, Set<Table>> entry: waiterTableAssignments.entrySet()) {
+            for (final Table table: entry.getValue()) {
+                tableWaiterAssignments.put(table, entry.getKey());
+            }
+        }
     }
 
     @Override
@@ -53,6 +75,11 @@ public class ManagementServiceImpl implements ManagementService {
 
         if (table == null) {
             throw new IllegalArgumentException("must provide table");
+        }
+
+        if (!loaded) {
+            loadFromPersistence();
+            loaded = true;
         }
 
         final Restaurant restaurant = table.getRestaurant();
@@ -72,8 +99,12 @@ public class ManagementServiceImpl implements ManagementService {
             }
         }
 
+        // In memory.
         tableWaiterAssignments.put(table, waiter);
         waiterTableAssignments.computeIfAbsent(waiter, waiter1 -> new HashSet<>()).add(table);
+
+        // In persistence.
+        persistenceService.assign(table, waiter);
 
         // Success
         return Collections.emptySet();
@@ -127,6 +158,11 @@ public class ManagementServiceImpl implements ManagementService {
             throw new IllegalArgumentException("must provide restaurant");
         }
 
+        if (!loaded) {
+            loadFromPersistence();
+            loaded = true;
+        }
+
         // Go through the tables and pick up the assigned waiters, or empty if none.
         return tables.stream()
                 .filter(table -> restaurant.equals(table.getRestaurant()))
@@ -139,6 +175,11 @@ public class ManagementServiceImpl implements ManagementService {
     public Map<Restaurant, Set<Table>> displayTables(Waiter waiter) {
         if (waiter == null) {
             throw new IllegalArgumentException("must provide waiter");
+        }
+
+        if (!loaded) {
+            loadFromPersistence();
+            loaded = true;
         }
 
         // Go through the waiter to table assignments if available, and group by the restaurant.

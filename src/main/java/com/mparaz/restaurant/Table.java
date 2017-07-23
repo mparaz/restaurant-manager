@@ -47,11 +47,7 @@ public class Table {
 
         final Table table = (Table) o;
 
-        if (!number.equals(table.number)) {
-            return false;
-        }
-
-        return restaurant.equals(table.restaurant);
+        return number.equals(table.number) && restaurant.equals(table.restaurant);
     }
 
     private static final int PRIME = 31;
@@ -61,5 +57,13 @@ public class Table {
         int result = number.hashCode();
         result = PRIME * result + restaurant.hashCode();
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Table{"
+                + "number='" + number + '\''
+                + ", restaurant=" + restaurant
+                + '}';
     }
 }
